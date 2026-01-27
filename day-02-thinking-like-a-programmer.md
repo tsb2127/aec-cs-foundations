@@ -79,6 +79,12 @@ Most automation bugs come from assumptions, not syntax.
 
 ---
 
+## CS50 – Lecture 0 takeaway
+- Reinforced that computers only do exactly what they’re told
+- Matches why ambiguity breaks automation
+- Confirms why logic-first thinking matters before APIs
+
+
 ## Questions I expect code to answer later
 - How do I reliably get all elements of a category?
 - How do I detect missing vs empty parameters?
