@@ -50,6 +50,42 @@ Computers fail where humans assume context.
 
 ---
 
+## Exercise 3: Making rules explicit
+
+Original rule:
+"Check if the model is ready for publishing."
+
+Rewrite as explicit checks:
+- The model contains no warning-level errors
+- All required parameters exist on required categories
+- All sheets have approved status
+- No elements exist on forbidden worksets
+
+### Lesson
+Vague goals must become testable rules.
+
+---
+
+## Exercise 4: Thinking in failure cases
+
+If this automation fails, possible reasons:
+- The model is workshared and not editable
+- Parameters exist but are not instance-based
+- Elements are in linked models
+- User permissions block access
+
+### Lesson
+Most automation bugs come from assumptions, not syntax.
+
+---
+
+## Questions I expect code to answer later
+- How do I reliably get all elements of a category?
+- How do I detect missing vs empty parameters?
+- How do I report issues without modifying the model?
+- How do I make this fast on large models?
+
+
 ## Reflection
 What surprised me:
 - Nothing really. The logic matches how I already think when building a dynamo script for example.
