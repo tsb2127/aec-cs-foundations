@@ -70,4 +70,4 @@ This doesn’t feel like “Dynamo stuff” anymore — it feels like software.
 ## Files added today
 - `model-health-engine.dyn`
 
-Both committed intentionally — this is not a throwaway experiment.
+
