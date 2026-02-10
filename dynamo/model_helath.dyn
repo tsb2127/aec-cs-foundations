@@ -1,0 +1,286 @@
+{
+  "Uuid": "ad86cd4a-ce8c-4516-9506-cb3945120719",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "Dynamo Python",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 732,
+      "SelectedString": "OST_Walls",
+      "Id": "57222f963d8f4c58ab7b37ebf7da183e",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "ce3ff81ab1944451b09ade71640ff5a7",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 178,
+      "SelectedString": "OST_Doors",
+      "Id": "963c8ef8bc9e44f19b97a77e1b5ee9c7",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "2ee426052cee4853a73610ae4b05b11c",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "d2ec3182020f4b59b699f6d107de0d37",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "9ddeeccfbcd04f9e9cae5e36a2be6f2a",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "c0ecbd5b28584e02b06fd9408e0dd3e5",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "705c66c7b87442a68b161a594e423503",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "953c803f6b424bbc854b846c387e4eba",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "71879f4233eb446c884983fc934a3deb",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# Load the Python Standard and DesignScript Libraries\r\nimport sys\r\nimport clr\r\nclr.AddReference('ProtoGeometry')\r\nfrom Autodesk.DesignScript.Geometry import *\r\n\r\n# The inputs to this node will be stored as a list in the IN variables.\r\ndataEnteringNode = IN\r\n\r\n# Place your code below this line\r\n\r\nimport datetime\r\n\r\n# Inputs from Dynamo\r\nitems = {\r\n    \"Walls\": IN[0],\r\n    \"Doors\": IN[1]\r\n}\r\n\r\n# Rule configuration (data, not logic)\r\nrule_config = {\r\n    \"Walls\": {\r\n        \"min_count\": 1,\r\n        \"severity\": \"warning\",\r\n        \"message\": \"No walls found (may be valid depending on model scope)\"\r\n    },\r\n    \"Doors\": {\r\n        \"min_count\": 1,\r\n        \"severity\": \"warning\",\r\n        \"message\": \"No doors found (may be valid in early design stages)\"\r\n    }\r\n}\r\n\r\nreport = {}\r\n\r\n# Schema + timestamp\r\nreport[\"schema_version\"] = \"1.0\"\r\nreport[\"report_type\"] = \"model_health\"\r\nreport[\"generated_at\"] = datetime.datetime.utcnow().isoformat() + \"Z\"\r\n\r\n# Count elements\r\ncounts = {}\r\nfor category, elements in items.items():\r\n    counts[category] = len(elements) if elements else 0\r\n\r\nreport[\"counts\"] = counts\r\n\r\n# Apply rules (generic engine)\r\nissues = []\r\n\r\nfor category, rule in rule_config.items():\r\n    count = counts.get(category, 0)\r\n\r\n    if count < rule[\"min_count\"]:\r\n        issues.append({\r\n            \"severity\": rule[\"severity\"],\r\n            \"category\": category,\r\n            \"message\": rule[\"message\"]\r\n        })\r\n\r\n# Info-level confirmation (optional but useful)\r\nif issues == []:\r\n    issues.append({\r\n        \"severity\": \"info\",\r\n        \"category\": \"model\",\r\n        \"message\": \"All configured checks passed\"\r\n    })\r\n\r\nreport[\"issues\"] = issues\r\n\r\n# Metadata\r\nreport[\"metadata\"] = {\r\n    \"generated_by\": \"Dynamo Python\",\r\n    \"environment\": \"Local Revit Model\"\r\n}\r\n\r\nOUT = report\r\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "3673788184cd475a8ba95ef7d684c5ea",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "0a4bdd067c8d4f10980ab1c19867ab36",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "62d9819f3f024244aa93be8af318ec29",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "78875dca87904b828ee34b0776582529",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "ce3ff81ab1944451b09ade71640ff5a7",
+      "End": "9ddeeccfbcd04f9e9cae5e36a2be6f2a",
+      "Id": "ad8b1a3dd7934d1a9d4840c17a8a511b",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "2ee426052cee4853a73610ae4b05b11c",
+      "End": "953c803f6b424bbc854b846c387e4eba",
+      "Id": "9efa2a061afb40a48087b3c6f1de7cfc",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "c0ecbd5b28584e02b06fd9408e0dd3e5",
+      "End": "0a4bdd067c8d4f10980ab1c19867ab36",
+      "Id": "4a0832a87ebe43aea369e2b6672d9981",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "71879f4233eb446c884983fc934a3deb",
+      "End": "62d9819f3f024244aa93be8af318ec29",
+      "Id": "0b282c4a08214d579c566873116b4ac7",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "3.3",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "8.2",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.3.0.6316",
+      "RunType": "Automatic",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "57222f963d8f4c58ab7b37ebf7da183e",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 208.8,
+        "Y": 108.40000000000003
+      },
+      {
+        "Id": "963c8ef8bc9e44f19b97a77e1b5ee9c7",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 246.40000000000003,
+        "Y": 282.80000000000007
+      },
+      {
+        "Id": "d2ec3182020f4b59b699f6d107de0d37",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 761.53794495183,
+        "Y": -208.41243460412687
+      },
+      {
+        "Id": "705c66c7b87442a68b161a594e423503",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 638.8000000000004,
+        "Y": 334.0
+      },
+      {
+        "Id": "3673788184cd475a8ba95ef7d684c5ea",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1196.0671441678444,
+        "Y": 227.8935976067139
+      }
+    ],
+    "Annotations": [],
+    "X": -107.49346196184626,
+    "Y": 180.59305079684714,
+    "Zoom": 0.789161032924816
+  }
+}
