@@ -1,0 +1,477 @@
+{
+  "Uuid": "bc322f2d-bd62-4490-945c-03b89ed025c5",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "day-17-rule-engine-refactor",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 732,
+      "SelectedString": "OST_Walls",
+      "Id": "5826d804542a4092b1422344b382110b",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "8f4db4ee670947fa8e43e8eedd655590",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 178,
+      "SelectedString": "OST_Doors",
+      "Id": "8b1d389e7d2e4aad9cbe86b65ccab616",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "b5e16c3079e148ce8276b579f703d399",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "6d6ef336946546359f1aafda5bcdbdcb",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "ab722310387148fa8765a8f877a70719",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "37886345980d4cbca070692ad877e084",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "87c646e2535b4e53a90f978c69d278d8",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "c0ad5643283a4704b459fa56d766cd6d",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "00c6bf83dd4c4996be61f99a6a5fd581",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# Load the Python Standard and DesignScript Libraries\r\nimport sys\r\nimport clr\r\nclr.AddReference('ProtoGeometry')\r\nfrom Autodesk.DesignScript.Geometry import *\r\n\r\n# The inputs to this node will be stored as a list in the IN variables.\r\ndataEnteringNode = IN\r\n\r\n# Place your code below this line\r\n\r\nimport datetime\r\n\r\n# -------------------------------------------------\r\n# Utilities\r\n# -------------------------------------------------\r\n\r\ndef normalize_to_list(x):\r\n    try:\r\n        return list(x)\r\n    except:\r\n        return [x] if x else []\r\n\r\n\r\ndef count_elements(items_dict):\r\n    counts = {}\r\n    for category in items_dict:\r\n        elements = normalize_to_list(items_dict[category])\r\n        counts[category] = len(elements)\r\n    return counts\r\n\r\n\r\ndef evaluate_rules(counts, rule_config):\r\n    issues = []\r\n\r\n    if \"rules\" not in rule_config:\r\n        return issues\r\n\r\n    rules_ds = rule_config[\"rules\"]\r\n\r\n    try:\r\n        rules_list = list(rules_ds)\r\n    except:\r\n        rules_list = []\r\n\r\n    for rule in rules_list:\r\n\r\n        category = rule[\"category\"]\r\n        min_count = rule[\"min_count\"]\r\n        severity = rule[\"severity\"]\r\n        message = rule[\"message\"]\r\n\r\n        actual_count = counts.get(category, 0)\r\n\r\n        if actual_count < min_count:\r\n            issues.append({\r\n                \"severity\": severity,\r\n                \"category\": category,\r\n                \"message\": message,\r\n                \"actual_count\": actual_count,\r\n                \"expected_min\": min_count\r\n            })\r\n\r\n    return issues\r\n\r\n\r\ndef build_report(counts, issues, rule_config):\r\n    report = {}\r\n\r\n    report[\"schema_version\"] = rule_config.get(\"schema_version\", \"unknown\")\r\n    report[\"report_type\"] = \"model_health\"\r\n    report[\"generated_at\"] = datetime.datetime.utcnow().isoformat() + \"Z\"\r\n\r\n    report[\"counts\"] = counts\r\n    report[\"issues\"] = issues\r\n\r\n    report[\"metadata\"] = {\r\n        \"generated_by\": \"Dynamo Python\",\r\n        \"environment\": \"Local Revit Model\"\r\n    }\r\n\r\n    return report\r\n\r\n\r\n# -------------------------------------------------\r\n# Main Execution\r\n# -------------------------------------------------\r\n\r\nitems = {\r\n    \"Walls\": IN[0],\r\n    \"Doors\": IN[1]\r\n}\r\n\r\nrule_config = IN[2]\r\n\r\ncounts = count_elements(items)\r\nissues = evaluate_rules(counts, rule_config)\r\nreport = build_report(counts, issues, rule_config)\r\n\r\nOUT = report\r\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "aeb03e1f353149b6b8c39f135e721b21",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "3a0c5cf19a6c4053a7d1e0c8af4b5747",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "48240c5a90ec4427a822894e040e91d8",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "690771c03a4a4524812c16c8f3b61291",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ea7e3f1cc9bf4fabb6bb787b40a6d727",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "ce42cbe89f04498c8e8d9ea32ee16b9e",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "36bb81caa15347ee92babcb118639bf7",
+          "Name": "",
+          "Description": "File Path",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows you to select a file on the system and returns its file path",
+      "HintPath": "C:\\Users\\bhalert\\Documents\\GitHub\\aec-cs-foundations\\qa-rules.json",
+      "InputValue": "..\\..\\Documents\\GitHub\\aec-cs-foundations\\qa-rules.json"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.FileObject, CoreNodeModels",
+      "Id": "03a1c60d4f0444fdb6eb7ead02e66962",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "74020e2a21014dadbcd0d8150e41b891",
+          "Name": "path",
+          "Description": "Path to the file.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "198ab44c975f4f7aac7d545cdf963b27",
+          "Name": "file",
+          "Description": "File object",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Creates a file object from the given path"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "8e7ab873da0545d69ef3bfb672be97e9",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "db47808541e9472f98556b9279d04f5d",
+          "Name": "json",
+          "Description": "A JSON string\n\nstring",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ccbc1e5752054f6e8178ae83a8579d7b",
+          "Name": "result",
+          "Description": "The result type depends on the content of the input string. The result type can be a primitive value (e.g. string, boolean, double), a List, or a Dictionary.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "DSCore.Data.ParseJSON@string",
+      "Replication": "Auto",
+      "Description": "Parse converts an arbitrary JSON string to a value. It is the opposite of JSON.Stringify.\n\nData.ParseJSON (json: string): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "d0936043e0e9415caec65a4f8646e9c7",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "41c55753e0dc45ca8f1fdf14e964511c",
+          "Name": "file",
+          "Description": "File object to read text from\n\nvar",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "154b5d77916c4b31b8af00dcc98d3398",
+          "Name": "string",
+          "Description": "Contents of the text file.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "DSCore.IO.FileSystem.ReadText@var",
+      "Replication": "Auto",
+      "Description": "Reads a text file and returns the contents as a string.\n\nFileSystem.ReadText (file: var): string"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "8f4db4ee670947fa8e43e8eedd655590",
+      "End": "ab722310387148fa8765a8f877a70719",
+      "Id": "f9eb20f3125644cb9f5f4af85d068a8d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "b5e16c3079e148ce8276b579f703d399",
+      "End": "c0ad5643283a4704b459fa56d766cd6d",
+      "Id": "06f97ad191864072a6e08e21858b9636",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "37886345980d4cbca070692ad877e084",
+      "End": "3a0c5cf19a6c4053a7d1e0c8af4b5747",
+      "Id": "b650a3f321cb47578c68b4eeded13c68",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "00c6bf83dd4c4996be61f99a6a5fd581",
+      "End": "48240c5a90ec4427a822894e040e91d8",
+      "Id": "7f777639e2594cfe8b930f6507a25b43",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "36bb81caa15347ee92babcb118639bf7",
+      "End": "74020e2a21014dadbcd0d8150e41b891",
+      "Id": "8293773fadef42f39d786cbcc4fbd45f",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "198ab44c975f4f7aac7d545cdf963b27",
+      "End": "41c55753e0dc45ca8f1fdf14e964511c",
+      "Id": "8dcebee08cbe4e0d8762d867202e94bb",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "ccbc1e5752054f6e8178ae83a8579d7b",
+      "End": "690771c03a4a4524812c16c8f3b61291",
+      "Id": "643ad4edebc6463f9503933a408e4d9b",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "154b5d77916c4b31b8af00dcc98d3398",
+      "End": "db47808541e9472f98556b9279d04f5d",
+      "Id": "187b2944ceac4e318ec0169c85bb06b7",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [
+    {
+      "Name": "qa-rules.json",
+      "ReferenceType": "External",
+      "Nodes": [
+        "ce42cbe89f04498c8e8d9ea32ee16b9e"
+      ]
+    }
+  ],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "3.3",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "8.2",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.3.0.6316",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "5826d804542a4092b1422344b382110b",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 208.8,
+        "Y": 108.40000000000003
+      },
+      {
+        "Id": "8b1d389e7d2e4aad9cbe86b65ccab616",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 246.40000000000003,
+        "Y": 282.80000000000007
+      },
+      {
+        "Id": "6d6ef336946546359f1aafda5bcdbdcb",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1473.3918034612338,
+        "Y": 56.276141575625644
+      },
+      {
+        "Id": "87c646e2535b4e53a90f978c69d278d8",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1455.2378586979191,
+        "Y": 258.57203700652235
+      },
+      {
+        "Id": "aeb03e1f353149b6b8c39f135e721b21",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1939.1396413818056,
+        "Y": -57.43385191222069
+      },
+      {
+        "Id": "ce42cbe89f04498c8e8d9ea32ee16b9e",
+        "Name": "File Path",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 213.8150209541712,
+        "Y": 584.9115850801109
+      },
+      {
+        "Id": "03a1c60d4f0444fdb6eb7ead02e66962",
+        "Name": "File From Path",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 740.4823011431345,
+        "Y": 550.5525706958258
+      },
+      {
+        "Id": "8e7ab873da0545d69ef3bfb672be97e9",
+        "Name": "Data.ParseJSON",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1474.4901097129346,
+        "Y": 461.06963803177496
+      },
+      {
+        "Id": "d0936043e0e9415caec65a4f8646e9c7",
+        "Name": "FileSystem.ReadText",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1025.0980173114635,
+        "Y": 550.0397495856128
+      }
+    ],
+    "Annotations": [],
+    "X": -1176.5351127025851,
+    "Y": 184.83221164322214,
+    "Zoom": 0.7803658253593849
+  }
+}
