@@ -1,0 +1,477 @@
+{
+  "Uuid": "e3ecadd5-24eb-4e00-afc6-f932a08170d1",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "day-18-severity-filters-and-aggregation",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 732,
+      "SelectedString": "OST_Walls",
+      "Id": "780f65243a89455290c69d374c0536a9",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "e282e6b07705459ea3535128bea5593c",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 178,
+      "SelectedString": "OST_Doors",
+      "Id": "ae36c4a7f9844dc98dccbbb3b3629dcd",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "6a3e5c528c12400da35f6e7f0dd158e7",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "ec1b68d182594895ace60142dcd02c53",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "92f8bb851e5e482ca866a56aba7af11a",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "28b45697a0864b20b885df94be2ad0f8",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "5dc17680c6b04730b67e600f4be433d5",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "3d192eb7723b4edc98fb4249d4b242a5",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "702cddc8585d4e4c92f95b56082a2e13",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# Load the Python Standard and DesignScript Libraries\r\nimport sys\r\nimport clr\r\nclr.AddReference('ProtoGeometry')\r\nfrom Autodesk.DesignScript.Geometry import *\r\n\r\n# The inputs to this node will be stored as a list in the IN variables.\r\ndataEnteringNode = IN\r\n\r\n# Place your code below this line\r\n\r\nimport datetime\r\n\r\n# -------------------------------------------------\r\n# Utilities\r\n# -------------------------------------------------\r\n\r\ndef normalize_to_list(x):\r\n    try:\r\n        return list(x)\r\n    except:\r\n        return [x] if x else []\r\n\r\n\r\ndef count_elements(items_dict):\r\n    counts = {}\r\n    for category in items_dict:\r\n        elements = normalize_to_list(items_dict[category])\r\n        counts[category] = len(elements)\r\n    return counts\r\n\r\n\r\ndef evaluate_rules(counts, rule_config):\r\n    issues = []\r\n    severity_counts = {\r\n        \"warning\": 0,\r\n        \"error\": 0\r\n        }\r\n\r\n    if \"rules\" not in rule_config:\r\n        return issues, severity_counts\r\n\r\n    rules_ds = rule_config[\"rules\"]\r\n\r\n    try:\r\n        rules_list = list(rules_ds)\r\n    except:\r\n        rules_list = []\r\n\r\n    for rule in rules_list:\r\n\r\n        category = rule[\"category\"]\r\n        min_count = rule[\"min_count\"]\r\n        severity = rule[\"severity\"]\r\n        message = rule[\"message\"]\r\n\r\n        actual_count = counts.get(category, 0)\r\n\r\n        if actual_count < min_count:\r\n            issues.append({\r\n                \"severity\": severity,\r\n                \"category\": category,\r\n                \"message\": message,\r\n                \"actual_count\": actual_count,\r\n                \"expected_min\": min_count\r\n            })\r\n            if severity in severity_counts:\r\n                severity_counts[severity] += 1\r\n\r\n    return issues, severity_counts\r\n\r\n\r\ndef build_report(counts, issues, severity_counts, rule_config):\r\n\r\n    total_issues = len(issues)\r\n    has_error = severity_counts[\"error\"] > 0\r\n\r\n    status = \"FAIL\" if has_error else \"PASS\"\r\n\r\n    report = {\r\n        \"status\": status,\r\n        \"summary\": {\r\n            \"total_issues\": total_issues,\r\n            \"warnings\": severity_counts[\"warning\"],\r\n            \"errors\": severity_counts[\"error\"]\r\n        },\r\n        \"counts\": counts,\r\n        \"issues\": issues,\r\n        \"schema_version\": rule_config.get(\"schema_version\", \"unknown\"),\r\n        \"generated_at\": datetime.datetime.utcnow().isoformat() + \"Z\"\r\n    }\r\n\r\n    return report\r\n\r\n# -------------------------------------------------\r\n# Main Execution\r\n# -------------------------------------------------\r\n\r\nitems = {\r\n    \"Walls\": IN[0],\r\n    \"Doors\": IN[1]\r\n}\r\n\r\nrule_config = IN[2]\r\n\r\ncounts = count_elements(items)\r\n\r\nissues, severity_counts = evaluate_rules(counts, rule_config)\r\n\r\nreport = build_report(counts, issues, severity_counts, rule_config)\r\n\r\nOUT = report\r\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "30f19ea196d84b23941f8544cddbdb92",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "dd2e72041cce42819617c8cf057fbb95",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "c242f637ded64fe8969bcb459e0db575",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "e880d0d7ff4f4042bbb055a5095fe9d3",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "7b597a11bdc04a87b3e06b77abdf69bb",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "Id": "0f73a710ba17409b87a9509959e6ba06",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "180f497d1c1e41229f49fdb0f121beb6",
+          "Name": "",
+          "Description": "File Path",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows you to select a file on the system and returns its file path",
+      "HintPath": "C:\\Users\\bhalert\\Documents\\GitHub\\aec-cs-foundations\\qa-rules.json",
+      "InputValue": "..\\..\\Documents\\GitHub\\aec-cs-foundations\\qa-rules.json"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.FileObject, CoreNodeModels",
+      "Id": "f928e06c415f4a4bb7ccee960b326aef",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "a3bf2ac8b45c454d80a095aa3d557ff6",
+          "Name": "path",
+          "Description": "Path to the file.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "96ccd3c5119a455d814021e19292d1e3",
+          "Name": "file",
+          "Description": "File object",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Creates a file object from the given path"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "7dcf5d15a44e4fb19266541b822d846d",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "3ff621bdfac247b4a8a82a058457a5af",
+          "Name": "json",
+          "Description": "A JSON string\n\nstring",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "3a5a305d32054634a850bcf072e614de",
+          "Name": "result",
+          "Description": "The result type depends on the content of the input string. The result type can be a primitive value (e.g. string, boolean, double), a List, or a Dictionary.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "DSCore.Data.ParseJSON@string",
+      "Replication": "Auto",
+      "Description": "Parse converts an arbitrary JSON string to a value. It is the opposite of JSON.Stringify.\n\nData.ParseJSON (json: string): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "d3f927fc99ab492ea9c718721cba7601",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "a033acd52fa34d719c4e437c264f2f3a",
+          "Name": "file",
+          "Description": "File object to read text from\n\nvar",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "cb98cb60461645ce9e3c160ee8d92813",
+          "Name": "string",
+          "Description": "Contents of the text file.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "DSCore.IO.FileSystem.ReadText@var",
+      "Replication": "Auto",
+      "Description": "Reads a text file and returns the contents as a string.\n\nFileSystem.ReadText (file: var): string"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "e282e6b07705459ea3535128bea5593c",
+      "End": "92f8bb851e5e482ca866a56aba7af11a",
+      "Id": "a3a2377641e245728d5859321b2ecd28",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "6a3e5c528c12400da35f6e7f0dd158e7",
+      "End": "3d192eb7723b4edc98fb4249d4b242a5",
+      "Id": "30a11c1c838947829aaeb6eb8fd56c1e",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "28b45697a0864b20b885df94be2ad0f8",
+      "End": "dd2e72041cce42819617c8cf057fbb95",
+      "Id": "75e6a7a72afb483ab5819a6a43b9602b",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "702cddc8585d4e4c92f95b56082a2e13",
+      "End": "c242f637ded64fe8969bcb459e0db575",
+      "Id": "ee7d4064639c49898356cfd52d08f555",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "180f497d1c1e41229f49fdb0f121beb6",
+      "End": "a3bf2ac8b45c454d80a095aa3d557ff6",
+      "Id": "af7519adcdd949e99cf447576dc6b901",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "96ccd3c5119a455d814021e19292d1e3",
+      "End": "a033acd52fa34d719c4e437c264f2f3a",
+      "Id": "2c197169418b48b0b18402871c48f58c",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "3a5a305d32054634a850bcf072e614de",
+      "End": "e880d0d7ff4f4042bbb055a5095fe9d3",
+      "Id": "564d7c84c59e4dc7aa6698914a8e01e8",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "cb98cb60461645ce9e3c160ee8d92813",
+      "End": "3ff621bdfac247b4a8a82a058457a5af",
+      "Id": "8939a07ae2b5415589c969b680796dcc",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [
+    {
+      "Name": "qa-rules.json",
+      "ReferenceType": "External",
+      "Nodes": [
+        "0f73a710ba17409b87a9509959e6ba06"
+      ]
+    }
+  ],
+  "EnableLegacyPolyCurveBehavior": true,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "3.3",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "8.2",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "3.3.0.6316",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "780f65243a89455290c69d374c0536a9",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 208.8,
+        "Y": 108.40000000000003
+      },
+      {
+        "Id": "ae36c4a7f9844dc98dccbbb3b3629dcd",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 246.40000000000003,
+        "Y": 282.80000000000007
+      },
+      {
+        "Id": "ec1b68d182594895ace60142dcd02c53",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1473.3918034612338,
+        "Y": 56.276141575625644
+      },
+      {
+        "Id": "5dc17680c6b04730b67e600f4be433d5",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1455.2378586979191,
+        "Y": 258.57203700652235
+      },
+      {
+        "Id": "30f19ea196d84b23941f8544cddbdb92",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1927.3502988695773,
+        "Y": -89.72639879354335
+      },
+      {
+        "Id": "0f73a710ba17409b87a9509959e6ba06",
+        "Name": "File Path",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 213.8150209541712,
+        "Y": 584.9115850801109
+      },
+      {
+        "Id": "f928e06c415f4a4bb7ccee960b326aef",
+        "Name": "File From Path",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 740.4823011431345,
+        "Y": 550.5525706958258
+      },
+      {
+        "Id": "7dcf5d15a44e4fb19266541b822d846d",
+        "Name": "Data.ParseJSON",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1474.4901097129346,
+        "Y": 461.06963803177496
+      },
+      {
+        "Id": "d3f927fc99ab492ea9c718721cba7601",
+        "Name": "FileSystem.ReadText",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1025.0980173114635,
+        "Y": 550.0397495856128
+      }
+    ],
+    "Annotations": [],
+    "X": -1176.5351127025851,
+    "Y": 184.83221164322214,
+    "Zoom": 0.7803658253593849
+  }
+}
